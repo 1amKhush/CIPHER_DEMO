@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Notes</title>
+</head>
+<body>
+
+<h1>My Notes</h1>
+
+<a href="/create">Create Note</a>
+<a href="/logout">Logout</a>
+
+<hr>
+
+{{range .}}
+
+<h3>{{.Title}}</h3>
+
+<p>{{.Content}}</p>
+
+<a href="/edit?id={{.ID}}">Edit</a>
+
+<a href="/delete?id={{.ID}}">Delete</a>
+
+<hr>
+
+{{end}}
+
+</body>
+</html>

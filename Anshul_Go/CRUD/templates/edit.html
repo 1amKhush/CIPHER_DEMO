@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit</title>
+</head>
+<body>
+
+<h1>Edit Note</h1>
+
+<form method="POST">
+
+    Title:
+    <input
+        type="text"
+        name="title"
+        value="{{.Title}}">
+
+    <br><br>
+
+    Content:
+    <textarea
+        name="content">{{.Content}}</textarea>
+
+    <br><br>
+
+    <button type="submit">
+        Update
+    </button>
+
+</form>
+
+</body>
+</html>
