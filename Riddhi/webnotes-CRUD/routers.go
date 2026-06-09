@@ -23,11 +23,11 @@ func Router () *mux.Router{
     protected:= router.PathPrefix("/api").Subrouter() //PathPrefix is used to group routes under a common prefix
 	protected.Use(Authmiddleware)
     
-	protected.HandleFunc("/api/notes", GetAllNotes).Methods("GET")
-    protected.HandleFunc("/api/note", CreateNote).Methods("POST")
-    protected.HandleFunc("/api/note/{id}", UpdateNote).Methods("PUT")
-    protected.HandleFunc("/api/note/{id}", DeleteNote).Methods("DELETE")
-    protected.HandleFunc("/api/notes", DeleteALLNotes).Methods("DELETE")
+	protected.HandleFunc("/notes", GetAllNotes).Methods("GET")
+    protected.HandleFunc("/note", CreateNote).Methods("POST")
+    protected.HandleFunc("/note/{id}", UpdateNote).Methods("PUT")
+    protected.HandleFunc("/note/{id}", DeleteNote).Methods("DELETE")
+    protected.HandleFunc("/notes", DeleteALLNotes).Methods("DELETE")
 	return router 
 }
 

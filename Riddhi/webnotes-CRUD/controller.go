@@ -24,7 +24,13 @@ func CheckPasswordHash(password, hash string) bool {
     return err == nil
 }
 
-var jwtSecret = []byte(os.Getenv("jwt"))
+func getJWTSecret() []byte {
+    secret := os.Getenv("jwt")
+    if secret == "" {
+        log.Fatal("JWT secret is not set")
+    }
+    return []byte(secret)
+}
 
 func GenerateJWT(email string) (string, error) {
 	claims:=jwt.MapClaims{ // claim means the data we want to include in the token
@@ -33,7 +39,7 @@ func GenerateJWT(email string) (string, error) {
 		"iat":jwt.NewNumericDate(time.Now()), // issued at time
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString(getJWTSecret())
 }
 
 func Authmiddleware(next http.Handler) http.Handler {
@@ -46,7 +52,7 @@ func Authmiddleware(next http.Handler) http.Handler {
 		token, err := jwt.Parse(
 		tokenString,
 		func(token *jwt.Token) (interface{}, error) {
-		return jwtSecret, nil
+		return getJWTSecret(), nil
 		},
 		)
 		if err != nil || !token.Valid {
