@@ -42,8 +42,8 @@ hash.Write(data)
 result:=hash.Sum(nil)
 fmt.Printf("%x\n", result) //readable form(hexadecimal number)
 fmt.Println(result) //in bytes
-fmt.Println(string(result))
-fmt.Println(hex.EncodeToString(result))//readable form(hexadecimal number)
+fmt.Println(string(result))//this is quite different-=�����E��\�Tܯ���Z�wU
+fmt.Println(hex.EncodeToString(result))//readable form(hexadecimal number)--so in of string
 
 //other way of keccka use
 
