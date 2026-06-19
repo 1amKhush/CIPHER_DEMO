@@ -60,7 +60,7 @@ func downloadFile(conn *net.TCPConn, filename string) {
 }
 
 func main() {
-    tcpServer, err := net.ResolveTCPAddr(TYPE, HOST+":"+PORT)
+    tcpServer, err := net.ResolveTCPAddr(TYPE,"hinac-103-251-51-12.run.pinggy-free.link:33459")
     if err != nil {
         log.Fatal(err)
     }
@@ -69,10 +69,13 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
+
     fmt.Println("Connected to server:", conn.RemoteAddr().String())
+
     if len(os.Args) < 3 {
         log.Fatal("Usage: go run client.go <POST/GET> <filename>")
     }
+    
     switch method := os.Args[1]; method {
     case "POST":
         file, err := os.Open(os.Args[2])
