@@ -176,7 +176,13 @@ func main() {
   //Ask user for file's path
 	fmt.Println("Enter file's path:")
 	var path string
-	_, err := fmt.Scanln(&path)
+	reader := bufio.NewReader(os.Stdin)
+	path, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	path = strings.TrimSpace(path)
 	if err != nil {
 		fmt.Println(err)
 		return
