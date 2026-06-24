@@ -1,0 +1,12 @@
+# Generated chunk files
+*.chunk.*
+
+# Test/generated binaries
+*.bin
+
+# PDFs used for testing
+test.pdf
+rebuilt.pdf
+
+# Metadata outputs (optional)
+*.json
