@@ -2,10 +2,12 @@ package main
 
 import (
  //"encoding/hex"
- "fmt"
+ //"fmt"
  "io"
  "os"
  "sync"
+ "sort"
+ "runtime"
 
 // "golang.org/x/crypto/sha3"
 )
@@ -40,31 +42,25 @@ func (c *DefaultFileChunker) ChunkFile(filePath string) ([]ChunkMeta, error) {
    break // If bytesRead is 0, it means EOF is reached
   }
 
-//   // Generate a unique hash for the chunk data
-//   hash :=sha3.NewLegacyKeccak256()
-//   hash.Write(buffer[:bytesRead]) //don't use hash.Write(buffer) since buffer always have fullsize
-//   result:=hash.Sum(nil)
-//   hashString := hex.EncodeToString(result[:])
+//   // Construct the chunk file name
+//   chunkFileName := fmt.Sprintf("%s.chunk.%d", filePath, index)
 
-  // Construct the chunk file name
-  chunkFileName := fmt.Sprintf("%s.chunk.%d", filePath, index)
-
-  // Create a new chunk file and write the buffer data to it
-  chunkFile, err := os.Create(chunkFileName)
-  if err != nil {
-   return nil, err
-  }
+//   // Create a new chunk file and write the buffer data to it
+//   chunkFile, err := os.Create(chunkFileName)
+//   if err != nil {
+//    return nil, err
+//   }
 
   chunkCopy := make([]byte, bytesRead)
  copy(chunkCopy, buffer[:bytesRead])
 
-  _, err = chunkFile.Write(chunkCopy)
-  if err != nil {
-   return nil, err
-  }
+//   _, err = chunkFile.Write(chunkCopy)
+//   if err != nil {
+//    return nil, err
+//   }
 
-  // Close the chunk file
-  chunkFile.Close()
+//   // Close the chunk file
+//   chunkFile.Close()
 
   //commitment engine
   key, commitment, err := GenerateCommitment(chunkCopy)
@@ -83,7 +79,7 @@ func (c *DefaultFileChunker) ChunkFile(filePath string) ([]ChunkMeta, error) {
 
 //Append metadata
   chunks = append(chunks, ChunkMeta{
-    FileName:       chunkFileName,
+   // FileName:       chunkFileName,
     ChunkIndex:          index,
     ChunkSize:      bytesRead,
     RandomKey:      key,
@@ -104,7 +100,7 @@ func (c *DefaultFileChunker) ChunkFile(filePath string) ([]ChunkMeta, error) {
 // It divides the file into chunks and processes them concurrently using multiple goroutines.
 func (c *DefaultFileChunker) ChunklargeFile(filePath string) ([]ChunkMeta, error) {
  var wg sync.WaitGroup
- var mu sync.Mutex
+ //var mu sync.Mutex //use later
  var chunks []ChunkMeta // Store metadata for each chunk
 
  // Open the file for reading
@@ -127,26 +123,40 @@ func (c *DefaultFileChunker) ChunklargeFile(filePath string) ([]ChunkMeta, error
 
  // Create channels to communicate between goroutines
  errChan := make(chan error, numChunks)
- indexChan := make(chan int, numChunks)
+ resultChan := make(chan ChunkMeta, numChunks)
+ jobChan := make(chan ChunkJob, numChunks)
 
- // Populate the index channel with chunk indices
- for i := 0; i < numChunks; i++ {
-  indexChan <- i
- }
- close(indexChan)
+ // Populate the job channel with chunk indices
+for i := 0; i < numChunks; i++ {
+
+    offset := int64(i) * int64(c.chunkSize)
+
+    jobChan <- ChunkJob{
+        Index:  i,
+        Offset: offset,
+    }
+}
+
+close(jobChan)
+
+//create fileId
+fileID := GenerateHash([]byte(filePath))
 
  // Start multiple goroutines to process chunks in parallel
- for i := 0; i < 4; i++ { // Number of parallel workers
+ //instead of hardcoded worker,choose worker count depending on machine
+ workers := runtime.NumCPU()
+
+ for i := 0; i < workers; i++ { // Number of parallel workers
   wg.Add(1)
   go func() {
    defer wg.Done()
-   for index := range indexChan {
-    // Calculate the offset for the current chunk
-    offset := int64(index) * int64(c.chunkSize)
-    buffer := make([]byte, c.chunkSize) // Create a buffer for chunk data
+   for job := range jobChan {
+   
+    // Create a buffer for chunk data
+    buffer := make([]byte, c.chunkSize) 
 
     // Read chunkSize bytes from the file into the buffer
-    bytesRead, err := file.ReadAt(buffer,offset)
+    bytesRead, err := file.ReadAt(buffer, job.Offset)
     if err != nil && err != io.EOF {
      errChan <- err
      return
@@ -154,41 +164,69 @@ func (c *DefaultFileChunker) ChunklargeFile(filePath string) ([]ChunkMeta, error
 
     // If bytesRead is 0, it means EOF is reached
     if bytesRead > 0 {
-    //  // Generate a unique hash for the chunk data
-    //  hash := sha3.NewLegacyKeccak256()
-    //  hash.Write(buffer[:bytesRead])
-    //  result := hash.Sum(nil)
-    //  hashString := hex.EncodeToString(result[:])
 
-     // Construct the chunk file name
-     chunkFileName := fmt.Sprintf("%s.chunk.%d", filePath, index)
+   
+    //  // Construct the chunk file name
+    //  chunkFileName := fmt.Sprintf("%s.chunk.%d", filePath, job.Index)
 
-     // Create a new chunk file and write the buffer data to it
-     chunkFile, err := os.Create(chunkFileName)
-     if err != nil {
-      errChan <- err
-      return
-     }
+    //  // Create a new chunk file and write the buffer data to it
+    //  chunkFile, err := os.Create(chunkFileName)
+    //  if err != nil {
+    //   errChan <- err
+    //   return
+    //  }
 
     chunkCopy := make([]byte, bytesRead)
     copy(chunkCopy, buffer[:bytesRead])
 
-     _, err = chunkFile.Write(chunkCopy)
+    //  _, err = chunkFile.Write(chunkCopy)
+    //  if err != nil {
+    //   errChan <- err
+    //   return
+    //  }
+
+    //Generate Hash
+     key, commitment, err := GenerateCommitment(chunkCopy)
      if err != nil {
-      errChan <- err
-      return
+     errChan <- err
+     return
      }
 
-     // Append metadata for the chunk to the chunks slice
-     chunk := ChunkMeta{
-      FileName: chunkFileName,ChunkIndex: index,ChunkSize: bytesRead,
-     }
-     mu.Lock()
-     chunks = append(chunks, chunk)
-     mu.Unlock()
+    //Generate Leaf
+    leaf := GenerateLeafHash(
+    fileID,
+    job.Index,
+    bytesRead,
+    chunkCopy,
+    )
+
+
+  //MetaData creation
+    meta := ChunkMeta{
+   // FileName: chunkFileName,
+    ChunkIndex: job.Index,
+    ChunkSize: bytesRead,
+
+    RandomKey: key,
+
+    CommitmentHash: commitment,
+
+    MerkleLeafHash: leaf,
+}
+
+resultChan <- meta 
+
+   //not needed
+    //  // Append metadata for the chunk to the chunks slice
+    //  chunk := ChunkMeta{
+    //   FileName: chunkFileName,ChunkIndex: index,ChunkSize: bytesRead,
+    //  }
+    //  mu.Lock()
+    //  chunks = append(chunks, chunk)
+    //  mu.Unlock()
 
      // Close the chunk file
-     defer chunkFile.Close()
+    // chunkFile.Close()
 
     }
    }
@@ -200,14 +238,24 @@ func (c *DefaultFileChunker) ChunklargeFile(filePath string) ([]ChunkMeta, error
   wg.Wait()
   
   close(errChan)
+  close(resultChan)
  }()
 
- // Check for errors from goroutines
- for err := range errChan {
-  if err != nil {
-   return nil, err
-  }
- }
+for meta := range resultChan {
+    chunks = append(chunks, meta)
+}
+select {
+case err := <-errChan:
+    if err != nil {
+        return nil, err
+    }
+default:
+}
+//to maintain order
+sort.Slice(chunks, func(i, j int) bool {
+    return chunks[i].ChunkIndex <
+           chunks[j].ChunkIndex
+}) 
 
  return chunks, nil
 }
