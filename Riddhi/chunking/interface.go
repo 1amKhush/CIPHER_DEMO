@@ -1,7 +1,7 @@
 package main
 
 type ChunkMeta struct {
-    FileName   string `json:"file_name"`
+  //  FileName   string `json:"file_name"`
     ChunkIndex      int    `json:"index"`
     ChunkSize  int    `json:"chunk_size"`
     RandomKey      string
@@ -24,5 +24,10 @@ type Reveal struct {
 
 type DefaultFileChunker struct {
  chunkSize int
+}
+
+type ChunkJob struct {
+    Index  int
+    Offset int64
 }
 
