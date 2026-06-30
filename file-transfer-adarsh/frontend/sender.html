@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Demo: Sender</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --border: #334155;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .dropzone:hover {
+            border-color: var(--primary);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .form-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        #upload-status {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+        .pin-display {
+            display: none;
+            text-align: center;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: #0f172a;
+            border-radius: 0.5rem;
+            border: 1px solid var(--primary);
+        }
+        .pin-code {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 8px;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        .timer {
+            color: var(--error);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.3s ease-out;
+        }
+        .toast.info { background-color: var(--primary); }
+        .toast.success { background-color: var(--success); }
+        .toast.error { background-color: var(--error); }
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div id="toast-container" class="toast-container"></div>
+
+<div class="container" id="sender-ui">
+    <h1>Cipher File Transfer</h1>
+
+    <div class="card">
+        <h2>📤 Send a File</h2>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <span id="file-label">Click to select a file or drag and drop</span>
+            <input type="file" id="fileInput" onchange="updateFileLabel()">
+        </div>
+        <div class="form-group">
+            <button onclick="uploadFile()" id="uploadBtn" style="width: 100%">Upload & Generate PIN</button>
+        </div>
+        <div id="upload-status"></div>
+
+        <div class="pin-display" id="pin-display">
+            <p style="margin: 0; color: #94a3b8;">Your Transfer PIN is:</p>
+            <div class="pin-code" id="pin-code">------</div>
+            <p style="margin: 0; color: #94a3b8;">Expires in: <span class="timer" id="timer">05:00</span></p>
+            <button onclick="resetSender()" style="margin-top: 1rem; width: 100%; background-color: var(--border);">Send Another File</button>
+        </div>
+    </div>
+    
+    <div style="text-align: center;">
+        <button onclick="window.location.href='index.html'" style="background: var(--border);">Back to Menu</button>
+    </div>
+</div>
+
+<script>
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    function updateFileLabel() {
+        const input = document.getElementById('fileInput');
+        const label = document.getElementById('file-label');
+        if (input.files.length > 0) {
+            label.textContent = "Selected: " + input.files[0].name;
+        } else {
+            label.textContent = "Click to select a file or drag and drop";
+        }
+    }
+
+    async function uploadFile() {
+        const input = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        if (input.files.length === 0) {
+            showToast("Please select a file first!", "error");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", input.files[0]);
+
+        showToast("Uploading to staging server...", "info");
+        uploadBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast("File uploaded successfully!", "success");
+                
+                // Show PIN
+                document.getElementById('pin-display').style.display = 'block';
+                document.getElementById('pin-code').textContent = result.pin;
+                startTimer();
+            } else {
+                showToast("Error: " + result.message, "error");
+                uploadBtn.disabled = false;
+            }
+        } catch (error) {
+            showToast("Connection error.", "error");
+            uploadBtn.disabled = false;
+        }
+    }
+
+    let countdownInterval;
+    function startTimer() {
+        let time = 300; // 5 minutes in seconds
+        const timerDisplay = document.getElementById('timer');
+        
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            time--;
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (time <= 0) {
+                clearInterval(countdownInterval);
+                timerDisplay.textContent = "EXPIRED";
+                document.getElementById('pin-code').style.color = "var(--error)";
+                document.getElementById('pin-code').style.textDecoration = "line-through";
+            }
+        }, 1000);
+    }
+
+    function resetSender() {
+        document.getElementById('pin-display').style.display = 'none';
+        document.getElementById('upload-status').style.display = 'block';
+        document.getElementById('upload-status').textContent = '';
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('fileInput').value = '';
+        updateFileLabel();
+        clearInterval(countdownInterval);
+    }
+</script>
+
+</body>
+</html>

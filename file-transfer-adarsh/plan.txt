@@ -1,0 +1,18 @@
+file should be sent through the network 
+    good ui based file sharing using the concept of tcp 
+
+till now : 
+    web ui of senser and reciever end hosted on 3000 port as part of webui
+    recever end get the file on port 8090 (running in background )
+    two handlers for uploading (staging & genrate pin) and downloading in api.go 
+    in-memory state storing to server multiple user at a time     
+    custom protocol: METHOD\filename\payload
+
+ngrok -- expose the port 3000 to the internet 
+
+
+next goal : 
+    garbage collector for staging 
+    user dicovery for same network 
+    increase max file size limit (>10mb)
+    encrypt
