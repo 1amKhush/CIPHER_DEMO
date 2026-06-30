@@ -1,0 +1,18 @@
+what has been done till now 
+
+lets understand the architecture of the file transfer between the two peers 
+
+understanding the net package in the go 
+resolving the domain names into ip 
+
+there should be the 
+make multiple docker as peers -- assign unique port 
+local p2p 
+
+peer discovery : 
+
+reciever 
+sender 
+control plane 
+
+

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Demo: Receiver</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --border: #334155;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background-color: var(--bg);
+            color: var(--text);
+            font-size: 1.1rem;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .toast.info {
+            background-color: var(--primary);
+        }
+
+        .toast.success {
+            background-color: var(--success);
+        }
+
+        .toast.error {
+            background-color: var(--error);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="container" id="receiver-ui">
+        <h1>Cipher File Transfer</h1>
+        <div class="card" style="text-align: center;">
+            <h2>📥 Receiver Mode</h2>
+            <p id="receiver-status" style="color: #94a3b8; margin: 1rem 0;">Ready to receive files.</p>
+
+            <div class="form-group" style="max-width: 300px; margin: 2rem auto;">
+                <input type="text" id="pinInput" placeholder="Enter 6-Digit PIN" maxlength="6">
+            </div>
+            <button onclick="downloadFile()" style="width: 100%; max-width: 300px;">Download File</button>
+
+            <div style="margin-top: 2rem;">
+                <button onclick="window.location.href='index.html'" style="background: var(--border);">Back to
+                    Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Start the background TCP receiver just in case when page loads
+        window.addEventListener('load', async () => {
+            try {
+                const res = await fetch('/api/start-receiver', { method: 'POST' });
+                if (res.ok) {
+                    document.getElementById('receiver-status').textContent = "TCP Receiver is active. Enter your PIN below.";
+                    document.getElementById('receiver-status').style.color = "var(--success)";
+                }
+            } catch (err) {
+                console.error("Failed to start background TCP receiver");
+            }
+        });
+
+        function downloadFile() {
+            const pinInput = document.getElementById('pinInput');
+            const pin = pinInput.value.trim();
+            if (pin.length !== 6) {
+                showToast("Please enter a valid 6-digit PIN", "error");
+                return;
+            }
+            showToast("Starting download...", "info");
+            window.location.href = '/api/download?pin=' + encodeURIComponent(pin);
+
+            // Reset the receiver input box after starting download
+            setTimeout(() => {
+                pinInput.value = '';
+            }, 1000);
+        }
+    </script>
+
+</body>
+
+</html>

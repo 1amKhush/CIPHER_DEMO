@@ -1,0 +1,5 @@
+this is the demo file for testing the file transfer functionality. It contains some sample text to verify that the file has been transferred correctly. The content of this file can be used to check for any discrepancies or errors during the transfer process.
+Make sure to compare the content of this file with the original source file to ensure that the transfer was successful and that no data was lost or corrupted. This file serves as a reference point for validating the integrity of the transferred data.
+Please feel free to modify the content of this file as needed for your testing purposes. You can add more lines of text, include special characters, or even insert some binary data to further test the
+robustness of the file transfer mechanism. Just remember to keep a backup of the original content in case you need to revert any changes.
+Overall, this demo file is a crucial part of the testing process for the file transfer functionality,and it should be handled with care to ensure accurate results. Happy testing! 
