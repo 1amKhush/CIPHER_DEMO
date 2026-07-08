@@ -68,15 +68,25 @@ for _, addr := range h.Addrs() {
 }
 
 	if opts.RelayAddr != "" {
+		fmt.Println("ENTERED RELAY BLOCK")
 		maddr, err := multiaddr.NewMultiaddr(opts.RelayAddr)
+		fmt.Println("parsed multiaddr")
 		if err != nil {
 			logger.Warn().Err(err).Str("relay_addr", opts.RelayAddr).Msg("Invalid relay multiaddr")
 		} else {
 			info, err := peer.AddrInfoFromP2pAddr(maddr)
+			fmt.Println("parsed peer info")
 			if err != nil {
 				logger.Warn().Err(err).Str("relay_addr", opts.RelayAddr).Msg("Failed to parse relay peer info")
 			} else {
 				// Connect to the relay
+				fmt.Println("Dialing relay...")
+				fmt.Println("Relay Peer ID:", info.ID)
+
+fmt.Println("Relay addresses:")
+for _, a := range info.Addrs {
+    fmt.Println(a)
+}
 				if err := h.Connect(ctx, *info); err != nil {
 					logger.Warn().Err(err).Msg("Failed to connect to relay")
 				} else {

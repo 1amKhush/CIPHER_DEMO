@@ -73,9 +73,9 @@ import (
 func main() {
 	ctx := context.Background()
 
-	relayCircuitAddr := "/ip4/10.255.255.254/tcp/9000/ws/p2p/12D3KooWQuGhVvCBAG1zVwn2wXdDCdXbqY3Nh6tYWRQtb7zbDd1F"
+	relayCircuitAddr := "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH"
 
-	providerID, err := peer.Decode("12D3KooWJfPKFZD68wBgMfLijqCQCmZx2AXc7RWY6MfqUPsPPPZf")
+	providerID, err := peer.Decode("12D3KooWNpk5WRASNGsia1XKK8nEVRVWMVN35knKHYRfsxTQ3bL8")
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +85,7 @@ func main() {
 		p2p.HostOptions{
 			ListenPort:  4002,
 			EnableMDNS:  false,
-			RelayAddr:   "/ip4/10.255.255.254/tcp/9000/ws/p2p/12D3KooWQuGhVvCBAG1zVwn2wXdDCdXbqY3Nh6tYWRQtb7zbDd1F",
+			RelayAddr:   "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH",
 			PrivKeyPath: "client.key",
 			//DisableHolePunch:  false, // Enforce strict relay tunneling
 		},

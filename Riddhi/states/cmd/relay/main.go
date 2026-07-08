@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -34,7 +33,6 @@ type NotifyBundle struct{}
 const (
 	defaultPublicHost = "relay-torrentium-pj9h.onrender.com"
 	defaultHTTPPort   = "10000"
-	relayListenAddr   = "/ip4/0.0.0.0/tcp/9000/ws"
 )
 
 var startTime = time.Now()
@@ -48,18 +46,18 @@ func (nb *NotifyBundle) Disconnected(n network.Network, c network.Conn) {
 	log.Printf("[disconnected] peer=%s", c.RemotePeer().String())
 }
 func (nb *NotifyBundle) OpenedStream(net network.Network, stream network.Stream) {
-	    log.Printf(
-        "[stream opened] %s -> %s protocol=%s",
-        stream.Conn().RemotePeer(),
-        stream.Conn().LocalPeer(),
-        stream.Protocol(),
-    )
+	log.Printf(
+		"[stream opened] %s -> %s protocol=%s",
+		stream.Conn().RemotePeer(),
+		stream.Conn().LocalPeer(),
+		stream.Protocol(),
+	)
 }
 func (nb *NotifyBundle) ClosedStream(net network.Network, stream network.Stream) {
-	 log.Printf(
-        "[stream closed] protocol=%s",
-        stream.Protocol(),
-    )
+	log.Printf(
+		"[stream closed] protocol=%s",
+		stream.Protocol(),
+	)
 }
 
 func getPrivateKey() (crypto.PrivKey, error) {
@@ -127,12 +125,19 @@ func publicHostFromEnv(value string) string {
 	return value
 }
 
-func startSelfPing(ctx context.Context, publicURL string) {
+func startSelfPing(ctx context.Context, healthURL string) {
 	interval := 10 * time.Minute
 	retryDelay := 30 * time.Second
 	maxRetries := 3
 	client := &http.Client{Timeout: 10 * time.Second}
-	healthURL := fmt.Sprintf("https://%s/health", publicURL)
+
+	if strings.TrimSpace(healthURL) == "" {
+		log.Println("[keep-alive] disabled; set KEEP_ALIVE_URL to a publicly reachable endpoint")
+		return
+	}
+	if !strings.Contains(healthURL, "://") {
+		healthURL = "https://" + healthURL
+	}
 
 	log.Printf("[keep-alive] Self-ping enabled → %s every %v", healthURL, interval)
 
@@ -201,6 +206,8 @@ func main() {
 		port = defaultHTTPPort
 	}
 
+	relayListenAddr := fmt.Sprintf("/ip4/0.0.0.0/tcp/%s/ws", port)
+
 	privKey, err := getPrivateKey()
 	if err != nil {
 		log.Fatalf("Failed to get private key: %v", err)
@@ -219,10 +226,10 @@ func main() {
 		libp2p.AddrsFactory(func(addrs []ma.Multiaddr) []ma.Multiaddr {
 			return []ma.Multiaddr{advertisedAddr}
 		}),
-		)
-		if err != nil {
-			log.Fatalf("Failed to create libp2p host: %v", err)
-		}
+	)
+	if err != nil {
+		log.Fatalf("Failed to create libp2p host: %v", err)
+	}
 	defer h.Close()
 
 	_, err = relayv2.New(h)
@@ -232,58 +239,55 @@ func main() {
 
 	h.Network().Notify(&NotifyBundle{})
 
-	relayInfo := RelayInfo{
-		PeerID:     h.ID().String(),
-		Multiaddrs: make([]string, 0),
-	}
-	for _, addr := range h.Addrs() {
-		relayInfo.Multiaddrs = append(relayInfo.Multiaddrs, fmt.Sprintf("%s/p2p/%s", addr, h.ID()))
-	}
-	
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(relayInfo)
-	})
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":      "ok",
-			"uptime":      time.Since(startTime).String(),
-			"peers":       len(h.Network().Peers()),
-			"connections": len(h.Network().Conns()),
-			"timestamp":   time.Now().Format(time.RFC3339),
-		})
+		_, _ = fmt.Fprintf(w, `{"status":"ok"}`)
 	})
 
-	server := &http.Server{
-		Addr:              ":" + port,
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
+	healthPort := strings.TrimSpace(os.Getenv("HEALTH_PORT"))
+	var healthServer *http.Server
+	if healthPort != "" {
+		healthServer = &http.Server{
+			Addr:              ":" + healthPort,
+			Handler:           mux,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = healthServer.Shutdown(shutdownCtx)
+		}()
+
+		go func() {
+			if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("HTTP health server failed: %v", err)
+			}
+		}()
+
+		log.Printf("HTTP health endpoint on port %s", healthPort)
+	} else {
+		log.Println("HTTP health endpoint disabled; set HEALTH_PORT to expose /health")
 	}
 
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		_ = server.Shutdown(shutdownCtx)
-	}()
+	keepAliveURL := strings.TrimSpace(os.Getenv("KEEP_ALIVE_URL"))
+	if keepAliveURL == "" {
+		log.Println("[keep-alive] no public endpoint configured; set KEEP_ALIVE_URL to keep the service awake")
+	} else {
+		go startSelfPing(ctx, keepAliveURL)
+	}
 
 	log.Println("Relay started successfully")
 	log.Printf("Peer ID: %s", h.ID())
 	fmt.Println()
-    fmt.Println("Relay Addresses:")
-    for _, addr := range h.Addrs() {
-    fmt.Printf("%s/p2p/%s\n", addr, h.ID())
-    }
-	log.Printf("WebSocket listening internally on port 9000")
-	log.Printf("HTTP /info endpoint on port %s", port)
-
-	go startSelfPing(ctx, publicHost)
-
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("HTTP server failed: %v", err)
+	fmt.Println("Relay Addresses:")
+	for _, addr := range h.Addrs() {
+		fmt.Printf("%s/p2p/%s\n", addr, h.ID())
 	}
+	log.Printf("WebSocket listening on port %s", port)
+
+	<-ctx.Done()
 }

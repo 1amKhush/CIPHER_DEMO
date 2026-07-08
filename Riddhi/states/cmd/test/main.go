@@ -94,7 +94,7 @@ func main() {
 		p2p.HostOptions{
 			ListenPort: 4001,
 			EnableMDNS: false,
-			RelayAddr: "/ip4/10.255.255.254/tcp/9000/ws/p2p/12D3KooWQuGhVvCBAG1zVwn2wXdDCdXbqY3Nh6tYWRQtb7zbDd1F",
+			RelayAddr: "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH",
 			PrivKeyPath: "provider.key",
 		//	DisableHolePunch:  false, // Enforce strict relay tunneling
 		},
