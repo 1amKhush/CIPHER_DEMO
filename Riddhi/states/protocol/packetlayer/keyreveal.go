@@ -5,6 +5,7 @@ type KeyRevealPayload struct {
 	Key         [32]byte
 }
 
+//not in use
 type TicketRejectPayload struct {
 	Reason uint8
 }

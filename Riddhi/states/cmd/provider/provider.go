@@ -1,156 +1,160 @@
 package main
 
-import (
-	"fmt"
-	"crypto/ed25519"
+/*This code is used to test file transfer using TCP if you want to use it then need to make some changes in protocol:-
+In transport and eveywhere:-instead of Stream network.stream use conn net.Conn
+ */
 
-	"riddhi/states/protocol/chunk"
-	"riddhi/states/protocol/handler"
-	"riddhi/states/protocol/packetlayer"
-	"riddhi/states/protocol/statemachine"
-	"riddhi/states/protocol/transportlayer"
-	"riddhi/states/storage"
-	"riddhi/states/protocol/session"
-)
+// import (
+// 	"fmt"
+// 	"crypto/ed25519"
 
-func main() {
+// 	"riddhi/states/protocol/chunk"
+// 	"riddhi/states/protocol/handler"
+// 	"riddhi/states/protocol/packetlayer"
+// 	"riddhi/states/protocol/statemachine"
+// 	"riddhi/states/protocol/transportlayer"
+// 	"riddhi/states/storage"
+// 	"riddhi/states/protocol/session"
+// )
 
-	listener, err :=
-		transportlayer.StartServer(
-			":8080",
-		)
+// func main() {
 
-	if err != nil {
-		panic(err)
-	}
+// 	listener, err :=
+// 		transportlayer.StartServer(
+// 			":8080",
+// 		)
 
-	fmt.Println(
-		"provider listening on :8080",
-	)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-
-	// preload chunks
-	chunker :=
-		chunk.DefaultFileChunker{
-			ChunkSize: 32 * 1024,
-		}
-
-	chunkedFile, err :=
-		chunker.ChunklargeFile(
-			"sample.pdf",
-		)
-
-	if err != nil {
-		panic(err)
-	}
-
-	storage.ChunkedFile = chunkedFile
-	fmt.Printf( "provider fileID: %x\n", storage.ChunkedFile.FileID, )
+// 	fmt.Println(
+// 		"provider listening on :8080",
+// 	)
 
 
-	conn, err := listener.Accept()
+// 	// preload chunks
+// 	chunker :=
+// 		chunk.DefaultFileChunker{
+// 			ChunkSize: 32 * 1024,
+// 		}
 
-	if err != nil {
-		panic(err)
-	}
+// 	chunkedFile, err :=
+// 		chunker.ChunklargeFile(
+// 			"sample.pdf",
+// 		)
 
-	transport := transportlayer.Transport{
-	Conn: conn,
-    }
-	defer conn.Close()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-    providerMachine :=
-	statemachine.NewMachine(
-		statemachine.Provider,
-	)
-
-	providerSession := &session.Session{}
-	fmt.Printf(
-    "provider session addr: %p\n",
-    providerSession,
-    )
-
-	//Generate signature
-	providerPub, providerPriv, _ := ed25519.GenerateKey(nil)
-    //store signature
-    providerSession.ProviderPrivateKey = providerPriv
-    providerSession.ProviderPublicKey = providerPub
+// 	storage.ChunkedFile = chunkedFile
+// 	fmt.Printf( "provider fileID: %x\n", storage.ChunkedFile.FileID, )
 
 
-for {
+// 	conn, err := listener.Accept()
 
-	packet, err :=
-		transport.ReceivePacket()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	if err != nil {
-		fmt.Println(
-			"connection closed",
-		)
-		return
-	}
+// 	transport := transportlayer.Transport{
+// 	Conn: conn,
+//     }
+// 	defer conn.Close()
 
-	// Handle packet based on type
-	switch packet.Type {
+//     providerMachine :=
+// 	statemachine.NewMachine(
+// 		statemachine.Provider,
+// 	)
 
-	case packetlayer.FileMetadataRequest:
+// 	providerSession := &session.Session{}
+// 	fmt.Printf(
+//     "provider session addr: %p\n",
+//     providerSession,
+//     )
 
-	response :=
-		handler.HandleFileMetadataRequest(
-			packet,
-		)
+// 	//Generate signature
+// 	providerPub, providerPriv, _ := ed25519.GenerateKey(nil)
+//     //store signature
+//     providerSession.ProviderPrivateKey = providerPriv
+//     providerSession.ProviderPublicKey = providerPub
 
-	err =
-		transport.SendPacket(
-			response,
-		)
 
-	if err != nil {
-		fmt.Println("send failed")
-		return
-	}
+// for {
 
-	case packetlayer.ChunkRequest:
+// 	packet, err :=
+// 		transport.ReceivePacket()
 
-		response :=
-			handler.HandleChunkRequest(
-				packet,
-				providerMachine,
-				providerSession,
+// 	if err != nil {
+// 		fmt.Println(
+// 			"connection closed",
+// 		)
+// 		return
+// 	}
 
-			)
+// 	// Handle packet based on type
+// 	switch packet.Type {
 
-		err =
-			transport.SendPacket(
-				response,
-			)
+// 	case packetlayer.FileMetadataRequest:
 
-		if err != nil {
-			fmt.Println(
-				"send failed",
-			)
-			return
-		}
+// 	response :=
+// 		handler.HandleFileMetadataRequest(
+// 			packet,
+// 		)
 
-	case packetlayer.LotteryTicket:
+// 	err =
+// 		transport.SendPacket(
+// 			response,
+// 		)
 
-		response :=
-			handler.HandleLotteryTicket(
-				packet,
-				providerMachine,
-				providerSession,
-			)
+// 	if err != nil {
+// 		fmt.Println("send failed")
+// 		return
+// 	}
 
-		err =
-			transport.SendPacket(
-				response,
-			)
+// 	case packetlayer.ChunkRequest:
 
-		if err != nil {
-			fmt.Println(
-				"send failed",
-			)
-			return
-		}
-	}
-}
-}
+// 		response :=
+// 			handler.HandleChunkRequest(
+// 				packet,
+// 				providerMachine,
+// 				providerSession,
+
+// 			)
+
+// 		err =
+// 			transport.SendPacket(
+// 				response,
+// 			)
+
+// 		if err != nil {
+// 			fmt.Println(
+// 				"send failed",
+// 			)
+// 			return
+// 		}
+
+// 	case packetlayer.LotteryTicket:
+
+// 		response :=
+// 			handler.HandleLotteryTicket(
+// 				packet,
+// 				providerMachine,
+// 				providerSession,
+// 			)
+
+// 		err =
+// 			transport.SendPacket(
+// 				response,
+// 			)
+
+// 		if err != nil {
+// 			fmt.Println(
+// 				"send failed",
+// 			)
+// 			return
+// 		}
+// 	}
+// }
+// }

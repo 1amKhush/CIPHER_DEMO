@@ -27,5 +27,8 @@ type Session struct {
     
     Proof      crypto.MerkleProof
     MerkleRoot        [32]byte
+
+    // true = this chunk is a payment chunk
+    PaidChunks map[uint32]bool
 }
 

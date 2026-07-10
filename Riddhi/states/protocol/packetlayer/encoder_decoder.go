@@ -3,7 +3,8 @@ package packetlayer
 import (
 	"encoding/binary"
 	"io"
-	"net"
+	//"net"
+	"github.com/libp2p/go-libp2p/core/network"
 	"crypto/ed25519"
 	"riddhi/states/protocol/crypto"
 )
@@ -136,18 +137,18 @@ func EncodePacket(t byte, payload []byte) []byte {
 }
 
 //decoder-for packet
-func DecodePacket(conn net.Conn) (*Packet, error) {
+func DecodePacket(Stream network.Stream) (*Packet, error) {  //instead of conn net.Conn we are using Stream
 
 	typeBuf := make([]byte, 1)
 
-	_, err := io.ReadFull(conn, typeBuf)
+	_, err := io.ReadFull(Stream, typeBuf)
 	if err != nil {
 		return nil, err
 	}
 
 	lenBuf := make([]byte, 4)
 
-	_, err = io.ReadFull(conn, lenBuf)
+	_, err = io.ReadFull(Stream, lenBuf)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func DecodePacket(conn net.Conn) (*Packet, error) {
 
 	payload := make([]byte, size)
 
-	_, err = io.ReadFull(conn, payload)
+	_, err = io.ReadFull(Stream, payload)
 	if err != nil {
 		return nil, err
 	}

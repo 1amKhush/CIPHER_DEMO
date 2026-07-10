@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"crypto/sha256"
+	//"crypto/sha256"
 	"fmt"
 
 	"riddhi/states/protocol/packetlayer"
@@ -16,6 +16,7 @@ func HandleLotteryTicket(
 	machine *statemachine.Machine,
 	session *session.Session,
 ) *packetlayer.Packet {
+
 
 	//Validate role and state
 	if machine.Role != statemachine.Provider {
@@ -56,42 +57,27 @@ func HandleLotteryTicket(
 		return nil
 	}
 
-	//winning logic
-	message :=
-	fmt.Sprintf(
-		"%d:%d",
-		ticket.ChunkIndex,
-		ticket.TicketID,
-	)
-	hash :=
-	sha256.Sum256(
-		[]byte(message),
-	)
-	
-	winner := hash[0] < 25
 
-	//repeat the process until a winner is found
-	if !winner {
-	reject :=
-	packetlayer.TicketRejectPayload{
-		Reason: 1,
+	// 0 = unpaid
+	// 1 = paid
+
+	isPaid := ticket.TicketID == 1
+
+	if isPaid {
+		fmt.Println(
+			"Received PAID card for chunk",
+			ticket.ChunkIndex,
+		)
+
+		// Later:
+		// Verify smart contract payment
+	} else {
+		fmt.Println(
+			"Received FREE card for chunk",
+			ticket.ChunkIndex,
+		)
 	}
 
-   encoded :=
-	packetlayer.EncodeTicketReject(
-		reject,
-	)
-
-    response :=
-	packetlayer.Packet{
-		Type: packetlayer.TicketReject,
-		Length: uint32(len(encoded)),
-		Payload: encoded,
-	}
-
-    return &response
-
-    }
 
 	//Build KeyReveal payload
 	reveal :=

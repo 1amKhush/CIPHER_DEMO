@@ -1,265 +1,269 @@
-package main
+ package main
 
-import (
-	"fmt"
-	"os"
-	"crypto/ed25519"
+ /*This code is used to test file transfer using TCP if you want to use it then need to make some changes in protocol:-
+In transport and DecodePacket:-instead of Stream network.stream use conn net.Conn
+ */
 
-	"riddhi/states/protocol/handler"
-	"riddhi/states/protocol/packetlayer"
-	"riddhi/states/protocol/statemachine"
-	"riddhi/states/protocol/transportlayer"
-	"riddhi/states/protocol/session"
-)
+// import (
+// 	"fmt"
+// 	"os"
+// 	"crypto/ed25519"
 
-func main() {
+// 	"riddhi/states/protocol/handler"
+// 	"riddhi/states/protocol/packetlayer"
+// 	"riddhi/states/protocol/statemachine"
+// 	"riddhi/states/protocol/transportlayer"
+// 	"riddhi/states/protocol/session"
+// )
 
-	// Connect to provider
-	conn, err :=
-		transportlayer.ConnectToProvider(
-			"localhost:8080",
-		)
+// func main() {
 
-	if err != nil {
-		panic(err)
-	}
+// 	// Connect to provider
+// 	conn, err :=
+// 		transportlayer.ConnectToProvider(
+// 			"localhost:8080",
+// 		)
 
-	defer conn.Close()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	//create a output file to write the rebuilt file
-	outputFile, err :=
-		os.Create("rebuilt.pdf")
+// 	defer conn.Close()
 
-	if err != nil {
-		panic(err)
-	}
+// 	//create a output file to write the rebuilt file
+// 	outputFile, err :=
+// 		os.Create("rebuilt.pdf")
 
-	defer outputFile.Close()
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	// Create a new state machine for the client
-    clientMachine :=
-	statemachine.NewMachine(
-		statemachine.Requester,
-	)
+// 	defer outputFile.Close()
 
-	// Create a new session for the client
-	clientSession := &session.Session{}
-	fmt.Printf(
-    "client session addr: %p\n",
-     clientSession,
-    )
+// 	// Create a new state machine for the client
+//     clientMachine :=
+// 	statemachine.NewMachine(
+// 		statemachine.Requester,
+// 	)
 
-	//Generate signature
-	clientPub, clientPriv, _ := ed25519.GenerateKey(nil)
-    //store signature
-    clientSession.RequesterPrivateKey = clientPriv
-    clientSession.RequesterPublicKey = clientPub
+// 	// Create a new session for the client
+// 	clientSession := &session.Session{}
+// 	fmt.Printf(
+//     "client session addr: %p\n",
+//      clientSession,
+//     )
 
-    //request for fileiNfo
-	transport := transportlayer.Transport{
-    Conn: conn,
-     }
-	req :=
-	packetlayer.FileMetadataRequestPayload{
-		FileName: "sample.pdf",
-	}
+// 	//Generate signature
+// 	clientPub, clientPriv, _ := ed25519.GenerateKey(nil)
+//     //store signature
+//     clientSession.RequesterPrivateKey = clientPriv
+//     clientSession.RequesterPublicKey = clientPub
 
-    encoded :=
-	packetlayer.EncodeFileMetadataRequest(
-		req,
-	)
+//     //request for fileiNfo
+// 	transport := transportlayer.Transport{
+//     Conn: conn,
+//      }
+// 	req :=
+// 	packetlayer.FileMetadataRequestPayload{
+// 		FileName: "sample.pdf",
+// 	}
 
-    packet :=
-	packetlayer.Packet{
-		Type: packetlayer.FileMetadataRequest,
-		Length: uint32(len(encoded)),
-		Payload: encoded,
-	}
+//     encoded :=
+// 	packetlayer.EncodeFileMetadataRequest(
+// 		req,
+// 	)
 
-	err = transport.SendPacket(&packet)
-   if err != nil {
-	panic(err)
-    }
+//     packet :=
+// 	packetlayer.Packet{
+// 		Type: packetlayer.FileMetadataRequest,
+// 		Length: uint32(len(encoded)),
+// 		Payload: encoded,
+// 	}
 
-    responsePacket, err := transport.ReceivePacket()
+// 	err = transport.SendPacket(&packet)
+//    if err != nil {
+// 	panic(err)
+//     }
 
-   if err != nil {
-	panic(err)
-    }
+//     responsePacket, err := transport.ReceivePacket()
 
-    metadata :=
-	packetlayer.DecodeFileMetadataResponse(
-		responsePacket.Payload,
-	)
+//    if err != nil {
+// 	panic(err)
+//     }
 
-    fmt.Printf(
-	"received fileID: %x\n",
-	metadata.FileID,
-     )
+//     metadata :=
+// 	packetlayer.DecodeFileMetadataResponse(
+// 		responsePacket.Payload,
+// 	)
 
-    fmt.Println(
-	"file size:",
-	metadata.FileSize,
-     )
+//     fmt.Printf(
+// 	"received fileID: %x\n",
+// 	metadata.FileID,
+//      )
 
-    fmt.Println(
-	"chunk size:",
-   	metadata.ChunkSize,
-     )
+//     fmt.Println(
+// 	"file size:",
+// 	metadata.FileSize,
+//      )
 
-	 clientSession.FileID = metadata.FileID
+//     fmt.Println(
+// 	"chunk size:",
+//    	metadata.ChunkSize,
+//      )
 
-
-	//nonce is for encryption(not signature)
-	var nonce [16]byte
-	copy(
-		nonce[:],
-		[]byte("abcdefghijklmnop"),
-	)
-
-	totalChunks := int(
-		metadata.FileSize /
-		uint64(metadata.ChunkSize),
-	)
-
-for i := 0; i < totalChunks; i++ {
-
-	req :=
-		packetlayer.ChunkRequestPayload{
-				ChunkIndex: uint32(i),
-				Nonce:      nonce,
-		}
-
-	encodedReq :=
-			packetlayer.EncodeChunkRequest(
-				req,
-		)
-
-	requestPacket :=
-			packetlayer.Packet{
-				Type:
-					packetlayer.ChunkRequest,
-
-				Length:
-					uint32(len(encodedReq)),
-
-				Payload:
-					encodedReq,
-		}
-
-	clientMachine.Transition(
-			statemachine.WaitingForChunkResponse,
-	    )
-
-	fmt.Println(
-			"Client requesting chunk",
-			i,
-		)
-
-    transport := transportlayer.Transport{
-	Conn: conn,
-        }
-
-    err = transport.SendPacket(&requestPacket)
-    responsePacket, err :=
-	transport.ReceivePacket()
-	if err != nil {
-		panic(err)
-	}
-	if responsePacket == nil {
-		panic("nil response packet")
-	}
-
-   //handle chunk response
-	handler.HandleChunkResponse(
-		responsePacket,
-		clientMachine,
-		clientSession,
-	    )
-
- for{
-
-	ticketPacket :=
-	handler.CreateLotteryTicket(
-		clientSession,
-	)
-  // SEND lottery ticket to provider
-    _,err =
-	conn.Write(
-		packetlayer.EncodePacket(
-			byte(ticketPacket.Type),
-			ticketPacket.Payload,
-		),
-	)
-
-    if err != nil {
-	panic(err)
-    }
-
-  // RECEIVE key reveal from provider
-    revealPacket, err :=
-	packetlayer.DecodePacket(
-		conn,
-	)
-
-    if err != nil {
-	panic(err)
-    }
-
-	//not winner, retry
-	if revealPacket.Type != packetlayer.KeyReveal {
-		fmt.Println(
-			"ticket lost retrying",
-		)
-
-		// generate NEW ticket
-		ticketPacket =
-			handler.CreateLotteryTicket(
-			clientSession,
-		)
-
-		continue
-	}
-
-	// winner, decrypt + verify
-	if revealPacket.Type == packetlayer.KeyReveal {
-   // decrypt + verify
-    plaintext :=
-	handler.HandleKeyReveal(
-		revealPacket,
-		clientMachine,
-		clientSession,
-	)
-
-	if plaintext == nil {
-		fmt.Println(
-			"verification failed",
-		)
-		continue
-	}
-
-    _, err =
-	outputFile.Write(
-		plaintext,
-	)
-
-    if err != nil {
-	panic(err)
-    }
-
-	  break
-
-	}
-
-  }
+// 	 clientSession.FileID = metadata.FileID
 
 
-}
+// 	//nonce is for encryption(not signature)
+// 	var nonce [16]byte
+// 	copy(
+// 		nonce[:],
+// 		[]byte("abcdefghijklmnop"),
+// 	)
 
-	fmt.Printf( "client fileID: %x\n", clientSession.FileID, )
+// 	totalChunks := int(
+// 		metadata.FileSize /
+// 		uint64(metadata.ChunkSize),
+// 	)
 
-	fmt.Println(
-		"file rebuilt",
-	)
+// for i := 0; i < totalChunks; i++ {
 
-}
+// 	req :=
+// 		packetlayer.ChunkRequestPayload{
+// 				ChunkIndex: uint32(i),
+// 				Nonce:      nonce,
+// 		}
+
+// 	encodedReq :=
+// 			packetlayer.EncodeChunkRequest(
+// 				req,
+// 		)
+
+// 	requestPacket :=
+// 			packetlayer.Packet{
+// 				Type:
+// 					packetlayer.ChunkRequest,
+
+// 				Length:
+// 					uint32(len(encodedReq)),
+
+// 				Payload:
+// 					encodedReq,
+// 		}
+
+// 	clientMachine.Transition(
+// 			statemachine.WaitingForChunkResponse,
+// 	    )
+
+// 	fmt.Println(
+// 			"Client requesting chunk",
+// 			i,
+// 		)
+
+//     transport := transportlayer.Transport{
+// 	Conn: conn,
+//         }
+
+//     err = transport.SendPacket(&requestPacket)
+//     responsePacket, err :=
+// 	transport.ReceivePacket()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	if responsePacket == nil {
+// 		panic("nil response packet")
+// 	}
+
+//    //handle chunk response
+// 	handler.HandleChunkResponse(
+// 		responsePacket,
+// 		clientMachine,
+// 		clientSession,
+// 	    )
+
+//  for{
+
+// 	ticketPacket :=
+// 	handler.CreateLotteryTicket(
+// 		clientSession,
+// 	)
+//   // SEND lottery ticket to provider
+//     _,err =
+// 	conn.Write(
+// 		packetlayer.EncodePacket(
+// 			byte(ticketPacket.Type),
+// 			ticketPacket.Payload,
+// 		),
+// 	)
+
+//     if err != nil {
+// 	panic(err)
+//     }
+
+//   // RECEIVE key reveal from provider
+//     revealPacket, err :=
+// 	packetlayer.DecodePacket(
+// 		conn,
+// 	)
+
+//     if err != nil {
+// 	panic(err)
+//     }
+
+// 	//not winner, retry
+// 	if revealPacket.Type != packetlayer.KeyReveal {
+// 		fmt.Println(
+// 			"ticket lost retrying",
+// 		)
+
+// 		// generate NEW ticket
+// 		ticketPacket =
+// 			handler.CreateLotteryTicket(
+// 			clientSession,
+// 		)
+
+// 		continue
+// 	}
+
+// 	// winner, decrypt + verify
+// 	if revealPacket.Type == packetlayer.KeyReveal {
+//    // decrypt + verify
+//     plaintext :=
+// 	handler.HandleKeyReveal(
+// 		revealPacket,
+// 		clientMachine,
+// 		clientSession,
+// 	)
+
+// 	if plaintext == nil {
+// 		fmt.Println(
+// 			"verification failed",
+// 		)
+// 		continue
+// 	}
+
+//     _, err =
+// 	outputFile.Write(
+// 		plaintext,
+// 	)
+
+//     if err != nil {
+// 	panic(err)
+//     }
+
+// 	  break
+
+// 	}
+
+//   }
+
+
+// }
+
+// 	fmt.Printf( "client fileID: %x\n", clientSession.FileID, )
+
+// 	fmt.Println(
+// 		"file rebuilt",
+// 	)
+
+// }

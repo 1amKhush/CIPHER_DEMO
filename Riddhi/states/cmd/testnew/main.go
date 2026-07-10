@@ -75,7 +75,7 @@ func main() {
 
 	relayCircuitAddr := "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH"
 
-	providerID, err := peer.Decode("12D3KooWNpk5WRASNGsia1XKK8nEVRVWMVN35knKHYRfsxTQ3bL8")
+	providerID, err := peer.Decode("12D3KooWKjaNqX2akTV5hBDVwCjS2shw4bL9BcCwgtsfE4Dkd87S")
 	if err != nil {
 		panic(err)
 	}

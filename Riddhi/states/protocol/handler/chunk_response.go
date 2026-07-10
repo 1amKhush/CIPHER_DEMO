@@ -1,7 +1,7 @@
 package handler
 import(
 	"fmt"
-	"math/rand"
+	//"math/rand"
 	"crypto/ed25519"
 	"riddhi/states/protocol/packetlayer"
 	"riddhi/states/protocol/statemachine"
@@ -95,9 +95,19 @@ func CreateLotteryTicket(
 	session *session.Session,
 ) *packetlayer.Packet{
 
-        TicketID:= uint32(rand.Uint32())
-		//TicketID: uint32(time.Now().UnixNano()) //other way
-		//TicketID: uint32(i + 1000) // other way
+//TicketID:= uint32(rand.Uint32())
+//TicketID: uint32(time.Now().UnixNano()) //other way
+//TicketID: uint32(i + 1000) // other way
+
+paid := session.PaidChunks[session.CurrentChunkIndex]
+
+var TicketID uint32
+
+if paid {
+	TicketID = 1
+} else {
+	TicketID = 0
+}
 
 // Generate signature
 sig := crypto.SignLotteryTicket(

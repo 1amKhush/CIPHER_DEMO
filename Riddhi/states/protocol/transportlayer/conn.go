@@ -1,12 +1,16 @@
 package transportlayer
 
 import (
-	"net"
+	//"net"
+
+	"github.com/libp2p/go-libp2p/core/network"
 	"riddhi/states/protocol/packetlayer"
 )
 
+
+//for p2p
 type Transport struct {
-	Conn net.Conn
+    Stream network.Stream  //instead of conn net.Conn
 }
 
 //SendPacket
@@ -19,7 +23,7 @@ func (t *Transport) SendPacket(
 		packet.Payload,
 	)
 
-	_, err := t.Conn.Write(encoded)
+	_, err := t.Stream.Write(encoded)
 
 	return err
 }
@@ -30,7 +34,7 @@ func (t *Transport) ReceivePacket() (
 	error,
 ) {
 	return packetlayer.DecodePacket(
-		t.Conn,
+		t.Stream,
 	)
 }
 
