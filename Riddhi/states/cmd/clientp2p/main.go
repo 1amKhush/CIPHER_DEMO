@@ -24,9 +24,9 @@ func main() {
 
 		ctx := context.Background()
 
-		relayCircuitAddr := "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH"
+		relayCircuitAddr := "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH" //Relay address after running relay
 
-		providerID, err := peer.Decode("12D3KooWHriVDgxoZZbX56SGxCUD9aUPn7i1e945Ph2HU3BssCKR")
+		providerID, err := peer.Decode("12D3KooWHriVDgxoZZbX56SGxCUD9aUPn7i1e945Ph2HU3BssCKR") //inside peer.Decode add ProviderID generated after running provider
 		if err != nil {
 			panic(err)
 		}
@@ -36,7 +36,7 @@ func main() {
 			p2p.HostOptions{
 				ListenPort:  4002,
 				EnableMDNS:  false,
-				RelayAddr:   "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH",
+				RelayAddr:   "/dns4/cipher-demo.onrender.com/tcp/443/wss/p2p/12D3KooWFvt5h2yNhG7QfLL4CwL6DxsjcaH559Z9eZgBzxgKJqsH",//Relay address after running relay
 				PrivKeyPath: "client.key",
 				//DisableHolePunch:  false, // Enforce strict relay tunneling
 			},
@@ -50,7 +50,7 @@ func main() {
 		//debugging
 		p2p.PrintConnections(h, providerID)
 
-		fmt.Println("Client:", h.ID())
+		fmt.Println("ClientID:", h.ID())
 
 		// Give the host a moment to register on the network
 		time.Sleep(5 * time.Second)

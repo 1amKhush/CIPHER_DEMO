@@ -62,7 +62,7 @@ func main() {
 
 	defer h.Close()
 
-	fmt.Println("Provider:", h.ID())
+	fmt.Println("ProviderID:", h.ID())
 
 	h.Network().Notify(&DebugNotify{})
 	
